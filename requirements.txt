@@ -8,3 +8,5 @@ alembic
 dotenv
 botbuilder.core
 botbuilder.schema
+python-dotenv
+aiohttp

@@ -1,54 +1,45 @@
-from fastapi import FastAPI, HTTPException
-import httpx
-from openai import OpenAI
-from pydantic import BaseModel
 import os
-from dotenv import load_dotenv
+from fastapi import FastAPI, Request, Response
+from botbuilder.schema import Activity
+import logging
+from bot.adapter import adapter
+from bot.bot import TeamsBot
+from routes.llm_route import llm_router
 
-# Load environment variables from a .env file (make sure to store your OpenAI API Key here)
-load_dotenv()
+logger = logging.getLogger(__name__)
 
-# Initialize OpenAI API client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # Ensure the OPENAI_API_KEY is set in the .env file
-
-# FastAPI app instance
 app = FastAPI()
 
-# Define request and response models
-class UserMessage(BaseModel):
-    message: str
+bot = TeamsBot()
 
-class ModelResponse(BaseModel):
-    response: str
+app.include_router(llm_router)
 
-# Endpoint to send message to the model and get a response
-@app.post("/api/message", response_model=ModelResponse)
-async def chat_with_model(user_message: UserMessage):
-    # Extract user message
-    user_input = user_message.message
-    
-    try:
-        # Send the message to the OpenAI GPT-4 API
-        response = client.chat.completions.create(
-            model="gpt-4",  # Specify the model (you can change it to "gpt-3.5-turbo" or others)
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": user_input}
-            ]
-        )
-        
-        # Extract the model's response
-        model_reply = response.choices[0].message.content.strip()
-        
-        # Return the response back to the user
-        return ModelResponse(response=model_reply)
-    
+@app.post("/api/messages")
+async def messages(request: Request):
+    """Main message endpoint for the bot."""
+    try: 
+        if "application/json" in request.headers.get("Content-Type", ""):
+            body = await request.json()
+        else:
+            return Response(status_code=415)
+
+        activity = Activity().deserialize(body)
+
+        auth_header = request.headers.get("Authorization", "")
+
+        response = await adapter.process_activity(activity, auth_header, bot.on_turn)
+        if response:
+            return Response(status_code=response.status)
+        return Response(status_code=200)
     except Exception as e:
-        # Handle API errors or other issues
-        raise HTTPException(status_code=500, detail=f"Error connecting to model: {str(e)}")
+        logging.error(f"Error processing message: {str(e)}")
+        return Response(status_code=500, content=str(e))
 
-# Health check endpoint (optional)
-@app.get("/health")
-def health_check():
-    return {"status": "Model endpoint is up and running!"}
 
+@app.get("/")
+def read_root():
+    return {
+        "message": "AI teams bot",
+        "version": "1.0.0",
+        "description": "This is an AI-powered Teams bot using FastAPI and Bot Framework."
+    }
