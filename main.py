@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 import httpx
-import openai
+from openai import OpenAI
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize OpenAI API client
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Ensure the OPENAI_API_KEY is set in the .env file
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # Ensure the OPENAI_API_KEY is set in the .env file
 
 # FastAPI app instance
 app = FastAPI()
@@ -29,7 +29,7 @@ async def chat_with_model(user_message: UserMessage):
     
     try:
         # Send the message to the OpenAI GPT-4 API
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",  # Specify the model (you can change it to "gpt-3.5-turbo" or others)
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
@@ -38,7 +38,7 @@ async def chat_with_model(user_message: UserMessage):
         )
         
         # Extract the model's response
-        model_reply = response.choices[0].message['content'].strip()
+        model_reply = response.choices[0].message.content.strip()
         
         # Return the response back to the user
         return ModelResponse(response=model_reply)
