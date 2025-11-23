@@ -17,7 +17,7 @@ class TeamsBot(ActivityHandler):
 
         llm_chat.add_user_message(user_message)
         try:
-            reply = await llm_chat.generate_response()
+            reply = llm_chat.generate_response()
             await turn_context.send_activity(reply)
             logger.info(f"Sent response to user: {reply}")
         except Exception as e:

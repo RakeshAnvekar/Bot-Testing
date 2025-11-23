@@ -27,9 +27,7 @@ async def messages(request: Request):
 
         auth_header = request.headers.get("Authorization", "")
 
-        response = await adapter.process_activity(activity, auth_header, bot.on_turn)
-        if response:
-            return Response(status_code=response.status)
+        await adapter.process_activity(activity, auth_header, bot.on_turn)
         return Response(status_code=200)
     except Exception as e:
         logging.error(f"Error processing message: {str(e)}")
