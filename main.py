@@ -25,7 +25,6 @@ async def messages(request: Request):
 
         activity = Activity().deserialize(body)
         auth_header = request.headers.get("Authorization")
-        await adapter.process(request, bot)
         return await adapter.process(request, bot)
     except Exception as e:
         logging.error(f"Error processing message: {str(e)}")
